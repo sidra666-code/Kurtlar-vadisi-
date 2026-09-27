@@ -129,6 +129,11 @@
                     <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Replik veya karakter ara..." 
                            class="w-full bg-vadi-card border border-vadi-border focus:border-vadi-gold text-sm rounded-xl pl-9 pr-4 py-2.5 text-gray-200 placeholder-gray-500 outline-none transition-all">
                 </div>
+                <label class="bg-vadi-gold/10 hover:bg-vadi-gold/20 border border-vadi-gold/40 text-vadi-gold hover:text-vadi-goldlight px-3.5 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-semibold shrink-0 cursor-pointer" title="Bilgisayarınızdaki MP3 Dosyalarını Seçin">
+                    <i class="fa-solid fa-folder-open text-base"></i>
+                    <span class="hidden sm:inline">MP3 Yükle</span>
+                    <input type="file" id="localFileInput" multiple accept="audio/*" onchange="handleFileSelect(event)" class="hidden">
+                </label>
                 <button onclick="stopAllSounds()" class="bg-vadi-card hover:bg-vadi-red/30 border border-vadi-border hover:border-vadi-red text-gray-300 hover:text-red-400 px-3 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-semibold shrink-0" title="Tüm Sesleri Durdur">
                     <i class="fa-solid fa-square text-vadi-crimson"></i>
                     <span class="hidden sm:inline">Durdur</span>
@@ -142,6 +147,21 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+        <div id="fileStatusBanner" class="mb-6 bg-vadi-card/90 border border-vadi-gold/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs transition-all">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-vadi-gold/15 border border-vadi-gold/30 flex items-center justify-center text-vadi-gold text-lg shrink-0">
+                    <i class="fa-solid fa-file-audio"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-sm">Yerel Ses Dosyaları Paneli</h3>
+                    <p class="text-gray-400 mt-0.5" id="fileStatusText">Seslerin sorunsuz çalması için sağ üstteki <b class="text-vadi-gold">MP3 Yükle</b> butonuna basıp 5 ses dosyanızı seçin veya dosyaları buraya sürükleyin.</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span id="loadedFileBadge" class="bg-vadi-dark border border-vadi-border text-vadi-gold font-mono px-3 py-1.5 rounded-xl text-xs font-bold">0 / 5 MP3 Yüklendi</span>
+            </div>
+        </div>
 
         <!-- Character Filter Tabs -->
         <nav class="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar scroll-smooth">
@@ -455,6 +475,52 @@
         let audioContext = null;
         let currentAudioElement = null;
 
+        function handleFileSelect(event) {
+            const files = (event.target && event.target.files) || (event.dataTransfer && event.dataTransfer.files);
+            if (!files || files.length === 0) return;
+
+            let matchedCount = 0;
+            Array.from(files).forEach(file => {
+                const blobUrl = URL.createObjectURL(file);
+                const cleanName = cleanFileName(file.name);
+
+                SOUND_DATABASE.forEach(item => {
+                    if (item.audioFile && cleanFileName(item.audioFile) === cleanName) {
+                        item.blobUrl = blobUrl;
+                        matchedCount++;
+                    }
+                });
+            });
+
+            updateFileStatus();
+            renderSoundGrid();
+
+            if (matchedCount > 0) {
+                showToast(`${matchedCount} adet MP3 dosyası başarıyla eşleştirildi!`, 'info');
+            } else {
+                showToast('Yüklenen MP3 dosyaları Laz Ziya ses isimleriyle eşleşmedi.', 'warning');
+            }
+        }
+
+        function cleanFileName(str) {
+            return (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+
+        function updateFileStatus() {
+            const matched = SOUND_DATABASE.filter(item => item.blobUrl).length;
+            const badge = document.getElementById('loadedFileBadge');
+            const text = document.getElementById('fileStatusText');
+            
+            if (badge) badge.innerText = `${matched} / 5 MP3 Yüklendi`;
+            if (text) {
+                if (matched === 5) {
+                    text.innerHTML = '<span class="text-emerald-400 font-semibold"><i class="fa-solid fa-circle-check"></i> Tüm Laz Ziya MP3 dosyaları hazır! Tıklayarak oynatabilirsiniz.</span>';
+                } else if (matched > 0) {
+                    text.innerHTML = `<span class="text-amber-300 font-semibold">${matched} adet MP3 yüklendi. Kalan dosyaları seçmek için "MP3 Yükle" butonunu kullanın.</span>`;
+                }
+            }
+        }
+
         function playCinematicHit() {
             try {
                 if (!audioContext) {
@@ -479,9 +545,7 @@
 
                 osc.start();
                 osc.stop(audioContext.currentTime + 0.45);
-            } catch (e) {
-                // AudioContext fallback
-            }
+            } catch (e) {}
         }
 
         function showToast(message, type = 'info') {
@@ -526,7 +590,6 @@
         }
 
         function playSound(id, event) {
-            // CRITICAL: Stop event bubbling to prevent double triggering (Start & Immediate Stop)
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -535,79 +598,74 @@
             const item = SOUND_DATABASE.find(s => s.id === id);
             if (!item) return;
 
-            // Toggle play/stop if clicking active sound
             if (currentPlayingId === id) {
                 stopAllSounds();
                 return;
             }
 
-            // Stop any ongoing sounds
             stopAudioEngine();
 
             currentPlayingId = id;
             updatePlayingUI(item);
             renderSoundGrid();
-
-            // Play cinematic sub hit effect
             playCinematicHit();
 
-            if (item.audioFile) {
+            // Prioritize blobUrl if user loaded files via "MP3 Yükle", else use local relative path
+            const audioSource = item.blobUrl || (item.audioFile ? encodeURI(item.audioFile) : null);
+
+            if (audioSource) {
                 try {
-                    // Encode URI for Turkish characters & parentheses in file paths
-                    const encodedPath = encodeURI(item.audioFile);
-                    const audio = new Audio(encodedPath);
+                    const audio = new Audio(audioSource);
                     currentAudioElement = audio;
 
-                    audio.onended = () => {
-                        stopAllSounds();
-                    };
+                    audio.onended = () => stopAllSounds();
 
-                    audio.onerror = (e) => {
-                        console.warn('Ses dosyası hatası:', item.audioFile, e);
-                        showToast(`"${item.audioFile}" dosyası bulunamadı! HTML ile aynı klasörde olduğundan emin olun.`, 'error');
-                        stopAllSounds();
+                    audio.onerror = () => {
+                        console.warn('MP3 Okunamadı:', item.audioFile);
+                        playSpeechFallback(item);
                     };
 
                     const playPromise = audio.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(err => {
-                            console.warn('Oynatma engellendi:', err);
-                            showToast(`Ses oynatılamadı. Dosya adı: ${item.audioFile}`, 'warning');
-                            stopAllSounds();
+                            console.warn('Oynatma hatası:', err);
+                            playSpeechFallback(item);
                         });
                     }
                 } catch (err) {
-                    console.error('Audio hatası:', err);
-                    showToast('Ses oynatılırken hata oluştu.', 'error');
-                    stopAllSounds();
+                    playSpeechFallback(item);
                 }
-            } else if (audioSynth) {
-                // Speech synthesis fallback for non-MP3 quotes
-                try {
-                    const utterance = new SpeechSynthesisUtterance(item.audioText || item.quote);
-                    utterance.lang = 'tr-TR';
-                    utterance.pitch = item.pitch || 0.7;
-                    utterance.rate = item.rate || 0.85;
+            } else {
+                playSpeechFallback(item);
+            }
+        }
 
-                    const voices = audioSynth.getVoices();
-                    const trVoice = voices.find(v => v.lang && v.lang.includes('tr'));
-                    if (trVoice) {
-                        utterance.voice = trVoice;
-                    }
+        function playSpeechFallback(item) {
+            if (!audioSynth) {
+                showToast(`"${item.audioFile}" oynatılamadı. Üstteki "MP3 Yükle" butonundan dosyaları seçebilirsiniz.`, 'warning');
+                stopAllSounds();
+                return;
+            }
 
-                    utterance.onend = () => {
-                        stopAllSounds();
-                    };
-
-                    utterance.onerror = (e) => {
-                        if (e.error === 'interrupted' || e.error === 'canceled') return;
-                        stopAllSounds();
-                    };
-
-                    audioSynth.speak(utterance);
-                } catch (err) {
-                    stopAllSounds();
+            try {
+                if (item.audioFile) {
+                    showToast(`"${item.audioFile}" yüklenemedi. MP3 dosyanızı seçmek için "MP3 Yükle" butonunu kullanın.`, 'warning');
                 }
+                const utterance = new SpeechSynthesisUtterance(item.audioText || item.quote);
+                utterance.lang = 'tr-TR';
+                utterance.pitch = item.pitch || 0.7;
+                utterance.rate = item.rate || 0.85;
+
+                const voices = audioSynth.getVoices();
+                const trVoice = voices.find(v => v.lang && v.lang.includes('tr'));
+                if (trVoice) utterance.voice = trVoice;
+
+                utterance.onend = () => stopAllSounds();
+                utterance.onerror = () => stopAllSounds();
+
+                audioSynth.speak(utterance);
+            } catch (err) {
+                stopAllSounds();
             }
         }
 
@@ -677,6 +735,7 @@
             filtered.forEach(item => {
                 const isFav = favorites.includes(item.id);
                 const isPlaying = currentPlayingId === item.id;
+                const isLoaded = !!item.blobUrl;
 
                 const cardHtml = `
                     <div id="card-${item.id}" onclick="playSound('${item.id}', event)" class="bg-vadi-card border ${isPlaying ? 'border-vadi-gold ring-1 ring-vadi-gold/50' : 'border-vadi-border'} rounded-2xl p-5 flex flex-col justify-between card-hover relative group cursor-pointer">
@@ -708,7 +767,11 @@
 
                         <!-- Action Bar -->
                         <div class="mt-4 pt-3 border-t border-vadi-border/60 flex items-center justify-between">
-                            <div class="flex gap-1 flex-wrap">
+                            <div class="flex gap-1 flex-wrap items-center">
+                                ${item.audioFile ? (isLoaded 
+                                    ? '<span class="text-[10px] bg-emerald-950/80 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800/60 font-semibold"><i class="fa-solid fa-check"></i> MP3 Hazır</span>' 
+                                    : '<span class="text-[10px] bg-amber-950/80 text-amber-300 px-2 py-0.5 rounded border border-amber-800/60 font-medium">Yerel MP3</span>'
+                                ) : ''}
                                 ${item.tags.map(tag => `<span class="text-[10px] bg-vadi-dark text-gray-400 px-2 py-0.5 rounded border border-vadi-border">#${tag}</span>`).join('')}
                             </div>
 
@@ -786,6 +849,17 @@
             if (window.speechSynthesis && speechSynthesis.onvoiceschanged !== undefined) {
                 speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
             }
+
+            // Add drag and drop support for files on the page
+            const fileStatusBanner = document.getElementById('fileStatusBanner');
+            if (fileStatusBanner) {
+                window.addEventListener('dragover', (e) => e.preventDefault());
+                window.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    handleFileSelect(e);
+                });
+            }
+
             renderSoundGrid();
         };
     </script>
