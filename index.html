@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="tr" class="dark">
 <head>
@@ -151,15 +152,15 @@
         <div id="fileStatusBanner" class="mb-6 bg-vadi-card/90 border border-vadi-gold/30 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 text-xs transition-all">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-vadi-gold/15 border border-vadi-gold/30 flex items-center justify-center text-vadi-gold text-lg shrink-0">
-                    <i class="fa-solid fa-file-audio"></i>
+                    <i class="fa-solid fa-folder-open"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-white text-sm">Yerel Ses Dosyaları Paneli</h3>
-                    <p class="text-gray-400 mt-0.5" id="fileStatusText">Seslerin sorunsuz çalması için sağ üstteki <b class="text-vadi-gold">MP3 Yükle</b> butonuna basıp 5 ses dosyanızı seçin veya dosyaları buraya sürükleyin.</p>
+                    <h3 class="font-bold text-white text-sm">Aynı Klasördeki MP3 Modu Aktif</h3>
+                    <p class="text-gray-400 mt-0.5" id="fileStatusText">Sesler HTML dosyanızla aynı klasördeki <b class="text-vadi-gold">.mp3</b> dosyalarından doğrudan oynatılır. (Manuel seçim opsiyoneldir)</p>
                 </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-                <span id="loadedFileBadge" class="bg-vadi-dark border border-vadi-border text-vadi-gold font-mono px-3 py-1.5 rounded-xl text-xs font-bold">0 / 5 MP3 Yüklendi</span>
+                <span id="loadedFileBadge" class="bg-vadi-dark border border-vadi-border text-vadi-gold font-mono px-3 py-1.5 rounded-xl text-xs font-bold"><i class="fa-solid fa-circle-check text-emerald-400 mr-1"></i> Otomatik Klasör Bağlantısı</span>
             </div>
         </div>
 
@@ -610,30 +611,41 @@
             renderSoundGrid();
             playCinematicHit();
 
-            // Prioritize blobUrl if user loaded files via "MP3 Yükle", else use local relative path
-            const audioSource = item.blobUrl || (item.audioFile ? encodeURI(item.audioFile) : null);
+            // Try direct local file path relative to HTML location
+            if (item.audioFile || item.blobUrl) {
+                const primarySrc = item.blobUrl || ('./' + item.audioFile);
+                const secondarySrc = item.blobUrl || encodeURI('./' + item.audioFile);
 
-            if (audioSource) {
-                try {
-                    const audio = new Audio(audioSource);
-                    currentAudioElement = audio;
+                let audio = new Audio();
+                audio.src = primarySrc;
+                currentAudioElement = audio;
 
-                    audio.onended = () => stopAllSounds();
+                audio.onended = () => stopAllSounds();
 
-                    audio.onerror = () => {
-                        console.warn('MP3 Okunamadı:', item.audioFile);
+                let hasRetried = false;
+                audio.onerror = () => {
+                    // Retry with URL encoded string if special characters (like paranthesis or accents) caused an issue
+                    if (!hasRetried && secondarySrc !== primarySrc) {
+                        hasRetried = true;
+                        audio.src = secondarySrc;
+                        audio.play().catch(() => playSpeechFallback(item));
+                    } else {
                         playSpeechFallback(item);
-                    };
-
-                    const playPromise = audio.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(err => {
-                            console.warn('Oynatma hatası:', err);
-                            playSpeechFallback(item);
-                        });
                     }
-                } catch (err) {
-                    playSpeechFallback(item);
+                };
+
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.warn('Oynatma denemesi:', err);
+                        if (!hasRetried && secondarySrc !== primarySrc) {
+                            hasRetried = true;
+                            audio.src = secondarySrc;
+                            audio.play().catch(() => playSpeechFallback(item));
+                        } else {
+                            playSpeechFallback(item);
+                        }
+                    });
                 }
             } else {
                 playSpeechFallback(item);
@@ -768,10 +780,7 @@
                         <!-- Action Bar -->
                         <div class="mt-4 pt-3 border-t border-vadi-border/60 flex items-center justify-between">
                             <div class="flex gap-1 flex-wrap items-center">
-                                ${item.audioFile ? (isLoaded 
-                                    ? '<span class="text-[10px] bg-emerald-950/80 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800/60 font-semibold"><i class="fa-solid fa-check"></i> MP3 Hazır</span>' 
-                                    : '<span class="text-[10px] bg-amber-950/80 text-amber-300 px-2 py-0.5 rounded border border-amber-800/60 font-medium">Yerel MP3</span>'
-                                ) : ''}
+                                ${item.audioFile ? '<span class="text-[10px] bg-vadi-dark text-vadi-gold px-2 py-0.5 rounded border border-vadi-gold/30 font-medium"><i class="fa-solid fa-file-audio"></i> Yerel MP3</span>' : ''}
                                 ${item.tags.map(tag => `<span class="text-[10px] bg-vadi-dark text-gray-400 px-2 py-0.5 rounded border border-vadi-border">#${tag}</span>`).join('')}
                             </div>
 
