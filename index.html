@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurtlar Vadisi - Konsey Ses Paketi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        vadi: {
+                            dark: '#0a0a0c',
+                            card: '#121216',
+                            border: '#22222a',
+                            red: '#8b0000',
+                            crimson: '#dc2626',
+                            gold: '#d4af37',
+                            goldlight: '#f3e5ab'
+                        }
+                    },
+                    fontFamily: {
+                        cinzel: ['Cinzel', 'serif'],
+                        sans: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #070709;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(139, 0, 0, 0.15), transparent 70%),
+                radial-gradient(circle at 10% 80%, rgba(212, 175, 55, 0.05), transparent 50%);
+            background-attachment: fixed;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .cinzel-title {
+            font-family: 'Cinzel', serif;
+            letter-spacing: 2px;
+        }
+
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #fff2a3 0%, #d4af37 50%, #aa7c11 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .red-glow {
+            box-shadow: 0 0 25px rgba(139, 0, 0, 0.4);
+        }
+
+        .card-hover {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            border-color: rgba(212, 175, 55, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(139, 0, 0, 0.3);
+        }
+
+        /* Waveform Animation */
+        .bar {
+            width: 3px;
+            height: 12px;
+            background-color: #dc2626;
+            display: inline-block;
+            border-radius: 3px;
+            animation: bounce 1s infinite ease-in-out;
+        }
+        .bar:nth-child(2) { animation-delay: 0.2s; }
+        .bar:nth-child(3) { animation-delay: 0.4s; }
+        .bar:nth-child(4) { animation-delay: 0.6s; }
+
+        @keyframes bounce {
+            0%, 100% { height: 6px; }
+            50% { height: 20px; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #22222a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8b0000;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-vadi-red selection:text-white">
+
+    <header class="border-b border-vadi-border bg-vadi-dark/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <!-- Logo & Brand -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="filterCategory('all')">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-vadi-red to-black border-2 border-vadi-gold/60 flex items-center justify-center shadow-lg red-glow">
+                    <i class="fa-solid font-bold text-vadi-gold text-xl">KV</i>
+                </div>
+                <div>
+                    <h1 class="cinzel-title text-2xl font-black gold-gradient-text tracking-wider">KURTLAR VADİSİ</h1>
+                    <p class="text-xs text-gray-400 font-medium tracking-widest uppercase">Konsey Ses Paketi</p>
+                </div>
+            </div>
+
+            <!-- Global Controls & Search Bar -->
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="relative flex-1 md:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="handleSearch()" placeholder="Replik veya karakter ara..." 
+                           class="w-full bg-vadi-card border border-vadi-border focus:border-vadi-gold text-sm rounded-xl pl-9 pr-4 py-2.5 text-gray-200 placeholder-gray-500 outline-none transition-all">
+                </div>
+                <button onclick="stopAllSounds()" class="bg-vadi-card hover:bg-vadi-red/30 border border-vadi-border hover:border-vadi-red text-gray-300 hover:text-red-400 px-3 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-semibold shrink-0" title="Tüm Sesleri Durdur">
+                    <i class="fa-solid fa-square text-vadi-crimson"></i>
+                    <span class="hidden sm:inline">Durdur</span>
+                </button>
+                <button onclick="playRandomSound()" class="bg-gradient-to-r from-vadi-red to-red-900 hover:from-red-800 hover:to-vadi-red border border-red-700/50 text-white px-4 py-2.5 rounded-xl transition flex items-center gap-2 text-sm font-semibold shadow-lg shrink-0">
+                    <i class="fa-solid fa-shuffle"></i>
+                    <span class="hidden sm:inline">Rastgele</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+        <!-- Character Filter Tabs -->
+        <nav class="flex items-center gap-2 overflow-x-auto pb-4 mb-8 no-scrollbar scroll-smooth">
+            <button onclick="filterCategory('all')" id="btn-all" class="nav-tab active bg-vadi-gold text-black font-bold px-5 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all shadow-md flex items-center gap-2">
+                <i class="fa-solid fa-border-all"></i> Tüm Sesler
+            </button>
+            <button onclick="filterCategory('favorites')" id="btn-favorites" class="nav-tab bg-vadi-card hover:bg-vadi-border text-gray-300 font-medium px-5 py-2.5 rounded-xl text-sm whitespace-nowrap border border-vadi-border transition-all flex items-center gap-2">
+                <i class="fa-solid fa-star text-amber-400"></i> Favorilerim (<span id="favCount">0</span>)
+            </button>
+            <div class="h-6 w-px bg-vadi-border mx-1 shrink-0"></div>
+            <button onclick="filterCategory('laz-ziya')" id="btn-laz-ziya" class="nav-tab bg-vadi-card hover:bg-vadi-border text-gray-300 font-medium px-5 py-2.5 rounded-xl text-sm whitespace-nowrap border border-vadi-border transition-all flex items-center gap-2">
+                <i class="fa-solid fa-gun text-vadi-gold"></i> Laz Ziya
+            </button>
+            <button onclick="filterCategory('testere-necmi')" id="btn-testere-necmi" class="nav-tab bg-vadi-card hover:bg-vadi-border text-gray-300 font-medium px-5 py-2.5 rounded-xl text-sm whitespace-nowrap border border-vadi-border transition-all flex items-center gap-2">
+                <i class="fa-solid fa-skull text-red-500"></i> Testere Necmi
+            </button>
+            <button onclick="filterCategory('karahanli')" id="btn-karahanli" class="nav-tab bg-vadi-card hover:bg-vadi-border text-gray-300 font-medium px-5 py-2.5 rounded-xl text-sm whitespace-nowrap border border-vadi-border transition-all flex items-center gap-2">
+                <i class="fa-solid fa-crown text-amber-300"></i> Mehmet Karahanlı
+            </button>
+            <button onclick="filterCategory('husrev-aga')" id="btn-husrev-aga" class="nav-tab bg-vadi-card hover:bg-vadi-border text-gray-300 font-medium px-5 py-2.5 rounded-xl text-sm whitespace-nowrap border border-vadi-border transition-all flex items-center gap-2">
+                <i class="fa-solid fa-hat-cowboy text-amber-600"></i> Hüsrev Ağa
+            </button>
+        </nav>
+
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 id="sectionTitle" class="cinzel-title text-xl font-bold text-white flex items-center gap-3">
+                    <span>Tüm Konsey Sesleri</span>
+                </h2>
+                <p id="sectionDesc" class="text-xs text-gray-400 mt-1">Kurtlar Vadisi Konsey üyelerinin unutulmaz raconları ve replikleri</p>
+            </div>
+            <span id="soundCountBadge" class="bg-vadi-card border border-vadi-border text-gray-400 text-xs px-3 py-1.5 rounded-full font-mono">
+                16 Ses
+            </span>
+        </div>
+
+        <div id="soundGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <!-- Cards will be dynamically generated by JS -->
+        </div>
+
+        <!-- Empty State Message -->
+        <div id="emptyState" class="hidden text-center py-16 bg-vadi-card/30 rounded-2xl border border-dashed border-vadi-border my-8">
+            <i class="fa-solid fa-volume-xmark text-4xl text-gray-600 mb-3"></i>
+            <h3 class="text-lg font-bold text-gray-300">Ses Bulunamadı</h3>
+            <p id="emptyStateText" class="text-sm text-gray-500 mt-1">Aradığınız kriterlere uygun bir replik mevcut değil.</p>
+        </div>
+    </main>
+
+    <div id="nowPlayingBar" class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-xl bg-vadi-card/95 border border-vadi-gold/40 backdrop-blur-xl rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-28 opacity-0 z-50 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 overflow-hidden">
+            <div id="playerAvatar" class="w-10 h-10 rounded-xl bg-vadi-red border border-vadi-gold/50 flex items-center justify-center font-bold text-white shrink-0 shadow">
+                <i class="fa-solid fa-volume-high"></i>
+            </div>
+            <div class="truncate">
+                <div class="flex items-center gap-2">
+                    <span id="playerChar" class="text-xs font-bold text-vadi-gold uppercase tracking-wider">Laz Ziya</span>
+                    <div class="flex gap-0.5 items-center">
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                        <span class="bar"></span>
+                    </div>
+                </div>
+                <p id="playerQuote" class="text-sm font-semibold text-white truncate">"Dostum olmaz, hasmım yaşamaz!"</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 shrink-0">
+            <button onclick="stopAllSounds()" class="w-9 h-9 rounded-full bg-vadi-border hover:bg-red-900/60 text-gray-300 hover:text-red-400 flex items-center justify-center transition">
+                <i class="fa-solid fa-stop text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <footer class="border-t border-vadi-border bg-vadi-dark py-6 mt-12 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="cinzel-title gold-gradient-text font-semibold">KURTLAR VADİSİ SES PAKETİ © 2026</p>
+            <p>Konsey Üyeleri: Laz Ziya • Testere Necmi • Mehmet Karahanlı • Hüsrev Ağa</p>
+        </div>
+    </footer>
+
+    <script>
+        const SOUND_DATABASE = [
+            // LAZ ZİYA (Yerel MP3 Sesleri)
+            {
+                id: 'lz-1',
+                characterId: 'laz-ziya',
+                characterName: 'Laz Ziya',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-900 to-black',
+                avatarIcon: 'fa-gun',
+                quote: 'ulaaan',
+                audioFile: 'ulaaaan.mp3',
+                tags: ['ulaaan', 'racon', 'laz ziya']
+            },
+            {
+                id: 'lz-2',
+                characterId: 'laz-ziya',
+                characterName: 'Laz Ziya',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-900 to-black',
+                avatarIcon: 'fa-gun',
+                quote: 'Bu alemde Karısının lafıyla iş yapan adam...',
+                audioFile: '(karisininlafiyla.mp3',
+                tags: ['karısı', 'alem', 'racon']
+            },
+            {
+                id: 'lz-3',
+                characterId: 'laz-ziya',
+                characterName: 'Laz Ziya',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-900 to-black',
+                avatarIcon: 'fa-gun',
+                quote: 'beni iyi tanı bana saygısızlık bu alemde bir defa yapılır',
+                audioFile: 'Beniiyitani.mp3',
+                tags: ['saygısızlık', 'alem', 'racon']
+            },
+            {
+                id: 'lz-4',
+                characterId: 'laz-ziya',
+                characterName: 'Laz Ziya',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-900 to-black',
+                avatarIcon: 'fa-gun',
+                quote: 'bana hayini verin',
+                audioFile: 'size24saatsüre.mp3',
+                tags: ['hain', 'süre', 'racon']
+            },
+            {
+                id: 'lz-5',
+                characterId: 'laz-ziya',
+                characterName: 'Laz Ziya',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-900 to-black',
+                avatarIcon: 'fa-gun',
+                quote: 'ulaan ben lazzıyayım',
+                audioFile: 'ulanbenlazziyayim.mp3',
+                tags: ['laz ziya', 'racon']
+            },
+
+            // TESTERE NECMİ
+            {
+                id: 'tn-1',
+                characterId: 'testere-necmi',
+                characterName: 'Testere Necmi',
+                characterRole: 'Konsey Saha Sorumlusu',
+                avatarBg: 'from-red-950 to-black',
+                avatarIcon: 'fa-skull',
+                quote: 'Kafa keserim, racon kesmem!',
+                tags: ['kafa', 'racon', 'şiddet'],
+                audioText: 'Kafa keserim, racon kesmem!',
+                pitch: 0.8,
+                rate: 1.05
+            },
+            {
+                id: 'tn-2',
+                characterId: 'testere-necmi',
+                characterName: 'Testere Necmi',
+                characterRole: 'Konsey Saha Sorumlusu',
+                avatarBg: 'from-red-950 to-black',
+                avatarIcon: 'fa-skull',
+                quote: 'Kan akacak Karahanlı, başka yolu yok!',
+                tags: ['kan', 'karahanlı', 'savaş'],
+                audioText: 'Kan akacak Karahanlı, başka yolu yok!',
+                pitch: 0.75,
+                rate: 1.0
+            },
+            {
+                id: 'tn-3',
+                characterId: 'testere-necmi',
+                characterName: 'Testere Necmi',
+                characterRole: 'Konsey Saha Sorumlusu',
+                avatarBg: 'from-red-950 to-black',
+                avatarIcon: 'fa-skull',
+                quote: 'Bizde biat esastır, sorgulama yoktur!',
+                tags: ['biat', 'konsey', 'sadakat'],
+                audioText: 'Bizde biat esastır, sorgulama yoktur!',
+                pitch: 0.8,
+                rate: 0.95
+            },
+            {
+                id: 'tn-4',
+                characterId: 'testere-necmi',
+                characterName: 'Testere Necmi',
+                characterRole: 'Konsey Saha Sorumlusu',
+                avatarBg: 'from-red-950 to-black',
+                avatarIcon: 'fa-skull',
+                quote: 'Biz emri Konsey’den alırız, sokaktan değil!',
+                tags: ['emir', 'konsey', 'sokak'],
+                audioText: 'Biz emri Konsey’den alırız, sokaktan değil!',
+                pitch: 0.85,
+                rate: 1.0
+            },
+
+            // MEHMET KARAHANLI
+            {
+                id: 'mk-1',
+                characterId: 'karahanli',
+                characterName: 'Mehmet Karahanlı',
+                characterRole: 'Konsey Başkanı (Baron)',
+                avatarBg: 'from-yellow-950 to-black',
+                avatarIcon: 'fa-crown',
+                quote: 'Sonunu düşünen kahraman olamaz.',
+                tags: ['son', 'kahraman', 'baron'],
+                audioText: 'Sonunu düşünen kahraman olamaz.',
+                pitch: 0.6,
+                rate: 0.8
+            },
+            {
+                id: 'mk-2',
+                characterId: 'karahanli',
+                characterName: 'Mehmet Karahanlı',
+                characterRole: 'Konsey Başkanı (Baron)',
+                avatarBg: 'from-yellow-950 to-black',
+                avatarIcon: 'fa-crown',
+                quote: 'Burada kararları yalnız ve yalnız ben veririm!',
+                tags: ['karar', 'otorite', 'baron'],
+                audioText: 'Burada kararları yalnız ve yalnız ben veririm!',
+                pitch: 0.55,
+                rate: 0.85
+            },
+            {
+                id: 'mk-3',
+                characterId: 'karahanli',
+                characterName: 'Mehmet Karahanlı',
+                characterRole: 'Konsey Başkanı (Baron)',
+                avatarBg: 'from-yellow-950 to-black',
+                avatarIcon: 'fa-crown',
+                quote: 'Sadakat, pazarlık konusu yapılamaz.',
+                tags: ['sadakat', 'pazarlık', 'ilke'],
+                audioText: 'Sadakat, pazarlık konusu yapılamaz.',
+                pitch: 0.6,
+                rate: 0.75
+            },
+            {
+                id: 'mk-4',
+                characterId: 'karahanli',
+                characterName: 'Mehmet Karahanlı',
+                characterRole: 'Konsey Başkanı (Baron)',
+                avatarBg: 'from-yellow-950 to-black',
+                avatarIcon: 'fa-crown',
+                quote: 'Sistem hata kabul etmez, edenleri yok eder.',
+                tags: ['sistem', 'hata', 'disiplin'],
+                audioText: 'Sistem hata kabul etmez, edenleri yok eder.',
+                pitch: 0.55,
+                rate: 0.8
+            },
+
+            // HÜSREV AĞA
+            {
+                id: 'ha-1',
+                characterId: 'husrev-aga',
+                characterName: 'Hüsrev Ağa',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-950 to-stone-900',
+                avatarIcon: 'fa-hat-cowboy',
+                quote: 'Uyuşturucu yok dedim Laz Ziya!',
+                tags: ['zehir', 'töre', 'laz ziya'],
+                audioText: 'Uyuşturucu yok dedim Laz Ziya!',
+                pitch: 0.65,
+                rate: 0.85
+            },
+            {
+                id: 'ha-2',
+                characterId: 'husrev-aga',
+                characterName: 'Hüsrev Ağa',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-950 to-stone-900',
+                avatarIcon: 'fa-hat-cowboy',
+                quote: 'Ağalık vermekle olur, almakla değil.',
+                tags: ['ağalık', 'cömertlik', 'töre'],
+                audioText: 'Ağalık vermekle olur, almakla değil.',
+                pitch: 0.6,
+                rate: 0.8
+            },
+            {
+                id: 'ha-3',
+                characterId: 'husrev-aga',
+                characterName: 'Hüsrev Ağa',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-950 to-stone-900',
+                avatarIcon: 'fa-hat-cowboy',
+                quote: 'Biz toprağa tohum ekeriz, zehir değil!',
+                tags: ['toprak', 'zehir', 'söz'],
+                audioText: 'Biz toprağa tohum ekeriz, zehir değil!',
+                pitch: 0.65,
+                rate: 0.85
+            },
+            {
+                id: 'ha-4',
+                characterId: 'husrev-aga',
+                characterName: 'Hüsrev Ağa',
+                characterRole: 'Konsey Üyesi',
+                avatarBg: 'from-amber-950 to-stone-900',
+                avatarIcon: 'fa-hat-cowboy',
+                quote: 'Bizim töremizde kahpelik de yoktur, kahpeye merhamet de!',
+                tags: ['töre', 'kahpe', 'merhamet'],
+                audioText: 'Bizim töremizde kahpelik de yoktur, kahpeye merhamet de!',
+                pitch: 0.6,
+                rate: 0.8
+            }
+        ];
+
+        let activeCategory = 'all';
+        let searchQuery = '';
+        let favorites = JSON.parse(localStorage.getItem('kv_favorites') || '[]');
+        let currentPlayingId = null;
+        let audioSynth = window.speechSynthesis;
+        let audioContext = null;
+        let currentAudioElement = null;
+
+        function playCinematicHit() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                // Dramatic sub bass hit synth
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(110, audioContext.currentTime); // Low A note
+                osc.frequency.exponentialRampToValueAtTime(30, audioContext.currentTime + 0.4);
+
+                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+
+                osc.start();
+                osc.stop(audioContext.currentTime + 0.5);
+            } catch (e) {
+                // AudioContext fallback silently
+            }
+        }
+
+        function renderSoundGrid() {
+            const grid = document.getElementById('soundGrid');
+            const emptyState = document.getElementById('emptyState');
+            grid.innerHTML = '';
+
+            let filtered = SOUND_DATABASE.filter(item => {
+                // Category Filter
+                const matchesCategory = 
+                    activeCategory === 'all' ? true :
+                    activeCategory === 'favorites' ? favorites.includes(item.id) :
+                    item.characterId === activeCategory;
+
+                // Search Filter
+                const matchesSearch = searchQuery === '' || 
+                    item.quote.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.characterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                return matchesCategory && matchesSearch;
+            });
+
+            // Update badge count
+            document.getElementById('soundCountBadge').innerText = `${filtered.length} Ses`;
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                if (activeCategory === 'favorites') {
+                    document.getElementById('emptyStateText').innerText = 'Henüz hiç favori ses eklemediniz. Yıldız ikonuna tıklayarak favorilerinize ekleyebilirsiniz.';
+                } else {
+                    document.getElementById('emptyStateText').innerText = 'Aradığınız kriterlere uygun bir replik bulunamadı.';
+                }
+                return;
+            }
+
+            grid.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+
+            filtered.forEach(item => {
+                const isFav = favorites.includes(item.id);
+                const isPlaying = currentPlayingId === item.id;
+
+                const cardHtml = `
+                    <div id="card-${item.id}" class="bg-vadi-card border ${isPlaying ? 'border-vadi-gold ring-1 ring-vadi-gold/50' : 'border-vadi-border'} rounded-2xl p-5 flex flex-col justify-between card-hover relative group">
+                        
+                        <!-- Top Info Bar -->
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br ${item.avatarBg} border border-vadi-border flex items-center justify-center text-vadi-gold shadow shrink-0">
+                                    <i class="fa-solid ${item.avatarIcon} text-base"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-white leading-snug">${item.characterName}</h3>
+                                    <span class="text-[11px] font-medium text-gray-500">${item.characterRole}</span>
+                                </div>
+                            </div>
+
+                            <!-- Favorite Button -->
+                            <button onclick="toggleFavorite('${item.id}', event)" class="text-gray-600 hover:text-amber-400 p-1.5 transition text-lg" title="Favorilere Ekle">
+                                <i class="${isFav ? 'fa-solid text-amber-400' : 'fa-regular'} fa-star"></i>
+                            </button>
+                        </div>
+
+                        <!-- Quote Text -->
+                        <div class="my-2 cursor-pointer" onclick="playSound('${item.id}')">
+                            <p class="text-base font-semibold text-gray-200 group-hover:text-vadi-goldlight transition italic leading-relaxed">
+                                "${item.quote}"
+                            </p>
+                        </div>
+
+                        <!-- Action Bar -->
+                        <div class="mt-4 pt-3 border-t border-vadi-border/60 flex items-center justify-between">
+                            <div class="flex gap-1 flex-wrap">
+                                ${item.tags.map(tag => `<span class="text-[10px] bg-vadi-dark text-gray-400 px-2 py-0.5 rounded border border-vadi-border">#${tag}</span>`).join('')}
+                            </div>
+
+                            <!-- Play Button -->
+                            <button onclick="playSound('${item.id}')" class="w-10 h-10 rounded-full ${isPlaying ? 'bg-vadi-crimson text-white scale-110 shadow-lg' : 'bg-vadi-dark hover:bg-vadi-red border border-vadi-border hover:border-vadi-red text-vadi-gold hover:text-white'} flex items-center justify-center transition-all shrink-0">
+                                <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play ml-0.5'} text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+
+            // Update favorites counter
+            document.getElementById('favCount').innerText = favorites.length;
+        }
+
+        function playSound(id) {
+            const item = SOUND_DATABASE.find(s => s.id === id);
+            if (!item) return;
+
+            // If already playing this, stop it
+            if (currentPlayingId === id) {
+                stopAllSounds();
+                return;
+            }
+
+            // Stop any playing audio
+            stopAllSounds();
+
+            // Play dramatic sub hit effect
+            playCinematicHit();
+
+            currentPlayingId = id;
+            updatePlayingUI(item);
+
+            if (item.audioFile) {
+                currentAudioElement = new Audio(item.audioFile);
+                currentAudioElement.play().catch(err => {
+                    console.log('Ses çalma hatası:', err);
+                });
+                currentAudioElement.onended = () => {
+                    stopAllSounds();
+                };
+                currentAudioElement.onerror = () => {
+                    stopAllSounds();
+                };
+            } else if (audioSynth) {
+                const utterance = new SpeechSynthesisUtterance(item.audioText || item.quote);
+                utterance.lang = 'tr-TR';
+                utterance.pitch = item.pitch || 0.7;
+                utterance.rate = item.rate || 0.85;
+
+                const voices = audioSynth.getVoices();
+                const trVoice = voices.find(v => v.lang.includes('tr'));
+                if (trVoice) {
+                    utterance.voice = trVoice;
+                }
+
+                utterance.onend = () => {
+                    stopAllSounds();
+                };
+
+                utterance.onerror = () => {
+                    stopAllSounds();
+                };
+
+                audioSynth.speak(utterance);
+            }
+
+            renderSoundGrid();
+        }
+
+        function updatePlayingUI(item) {
+            const nowPlayingBar = document.getElementById('nowPlayingBar');
+            document.getElementById('playerChar').innerText = item.characterName;
+            document.getElementById('playerQuote').innerText = `"${item.quote}"`;
+
+            nowPlayingBar.classList.remove('translate-y-28', 'opacity-0');
+            nowPlayingBar.classList.add('translate-y-0', 'opacity-100');
+        }
+
+        function stopAllSounds() {
+            if (audioSynth) {
+                audioSynth.cancel();
+            }
+            if (currentAudioElement) {
+                currentAudioElement.pause();
+                currentAudioElement.currentTime = 0;
+                currentAudioElement = null;
+            }
+            currentPlayingId = null;
+
+            const nowPlayingBar = document.getElementById('nowPlayingBar');
+            if (nowPlayingBar) {
+                nowPlayingBar.classList.add('translate-y-28', 'opacity-0');
+                nowPlayingBar.classList.remove('translate-y-0', 'opacity-100');
+            }
+
+            renderSoundGrid();
+        }
+
+        function playRandomSound() {
+            const randomIndex = Math.floor(Math.random() * SOUND_DATABASE.length);
+            const randomItem = SOUND_DATABASE[randomIndex];
+            playSound(randomItem.id);
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+
+            // Update Tab UI
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('bg-vadi-gold', 'text-black', 'font-bold');
+                tab.classList.add('bg-vadi-card', 'text-gray-300', 'font-medium', 'border-vadi-border');
+            });
+
+            const activeBtn = document.getElementById(`btn-${cat}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-vadi-card', 'text-gray-300', 'font-medium', 'border-vadi-border');
+                activeBtn.classList.add('bg-vadi-gold', 'text-black', 'font-bold');
+            }
+
+            // Update Headers
+            const titleMap = {
+                'all': 'Tüm Konsey Sesleri',
+                'favorites': '⭐ Favori Seslerim',
+                'laz-ziya': '🔪 Laz Ziya Ses Paketi',
+                'testere-necmi': '🪓 Testere Necmi Ses Paketi',
+                'karahanli': '👑 Mehmet Karahanlı Ses Paketi',
+                'husrev-aga': '🌿 Hüsrev Ağa Ses Paketi'
+            };
+
+            const descMap = {
+                'all': 'Kurtlar Vadisi Konsey üyelerinin unutulmaz raconları ve replikleri',
+                'favorites': 'Kaydettiğiniz ve en sevdiğiniz efsane replikler',
+                'laz-ziya': 'Dostum olmaz, hasmım yaşamaz! - Laz Ziya efsane replikleri',
+                'testere-necmi': 'Kafa keserim, racon kesmem! - Testere Necmi özel sesleri',
+                'karahanli': 'Sonunu düşünen kahraman olamaz. - Baron Mehmet Karahanlı sesleri',
+                'husrev-aga': 'Biz toprağa tohum ekeriz, zehir değil! - Hüsrev Ağa replikleri'
+            };
+
+            document.getElementById('sectionTitle').innerHTML = `<span>${titleMap[cat]}</span>`;
+            document.getElementById('sectionDesc').innerText = descMap[cat];
+
+            renderSoundGrid();
+        }
+
+        function handleSearch() {
+            searchQuery = document.getElementById('searchInput').value;
+            renderSoundGrid();
+        }
+
+        function toggleFavorite(id, event) {
+            event.stopPropagation();
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(favId => favId !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem('kv_favorites', JSON.stringify(favorites));
+            renderSoundGrid();
+        }
+
+        window.onload = function() {
+            // Load Speech Synth voices in background
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+            }
+            renderSoundGrid();
+        };
+    </script>
+</body>
+</html>
