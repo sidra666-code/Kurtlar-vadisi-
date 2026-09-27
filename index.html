@@ -190,6 +190,9 @@
         </div>
     </main>
 
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
     <div id="nowPlayingBar" class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[92%] max-w-xl bg-vadi-card/95 border border-vadi-gold/40 backdrop-blur-xl rounded-2xl p-4 shadow-2xl transition-all duration-300 translate-y-28 opacity-0 z-50 flex items-center justify-between gap-4">
         <div class="flex items-center gap-3 overflow-hidden">
             <div id="playerAvatar" class="w-10 h-10 rounded-xl bg-vadi-red border border-vadi-gold/50 flex items-center justify-center font-bold text-white shrink-0 shadow">
@@ -539,37 +542,184 @@
                             </div>
 
                             <!-- Favorite Button -->
-                            <button onclick="toggleFavorite('${item.id}', event)" class="text-gray-600 hover:text-amber-400 p-1.5 transition text-lg" title="Favorilere Ekle">
-                                <i class="${isFav ? 'fa-solid text-amber-400' : 'fa-regular'} fa-star"></i>
-                            </button>
-                        </div>
-
-                        <!-- Quote Text -->
-                        <div class="my-2 cursor-pointer" onclick="playSound('${item.id}')">
-                            <p class="text-base font-semibold text-gray-200 group-hover:text-vadi-goldlight transition italic leading-relaxed">
-                                "${item.quote}"
-                            </p>
-                        </div>
-
-                        <!-- Action Bar -->
-                        <div class="mt-4 pt-3 border-t border-vadi-border/60 flex items-center justify-between">
-                            <div class="flex gap-1 flex-wrap">
-                                ${item.tags.map(tag => `<span class="text-[10px] bg-vadi-dark text-gray-400 px-2 py-0.5 rounded border border-vadi-border">#${tag}</span>`).join('')}
-                            </div>
-
-                            <!-- Play Button -->
-                            <button onclick="playSound('${item.id}')" class="w-10 h-10 rounded-full ${isPlaying ? 'bg-vadi-crimson text-white scale-110 shadow-lg' : 'bg-vadi-dark hover:bg-vadi-red border border-vadi-border hover:border-vadi-red text-vadi-gold hover:text-white'} flex items-center justify-center transition-all shrink-0">
-                                <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play ml-0.5'} text-sm"></i>
-                            </button>
-                        </div>
+                        <button onclick="toggleFavorite('${item.id}', event)" class="text-gray-600 hover:text-amber-400 p-1.5 transition text-lg" title="Favorilere Ekle">
+                            <i class="${isFav ? 'fa-solid text-amber-400' : 'fa-regular'} fa-star"></i>
+                        </button>
                     </div>
-                `;
-                grid.innerHTML += cardHtml;
-            });
 
-            // Update favorites counter
-            document.getElementById('favCount').innerText = favorites.length;
+                    <!-- Quote Text -->
+                    <div class="my-2 cursor-pointer" onclick="playSound('${item.id}', event)">
+                        <p class="text-base font-semibold text-gray-200 group-hover:text-vadi-goldlight transition italic leading-relaxed">
+                            "${item.quote}"
+                        </p>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="mt-4 pt-3 border-t border-vadi-border/60 flex items-center justify-between">
+                        <div class="flex gap-1 flex-wrap">
+                            ${item.tags.map(tag => `<span class="text-[10px] bg-vadi-dark text-gray-400 px-2 py-0.5 rounded border border-vadi-border">#${tag}</span>`).join('')}
+                        </div>
+
+                        <!-- Play Button -->
+                        <button onclick="playSound('${item.id}', event)" class="w-10 h-10 rounded-full ${isPlaying ? 'bg-vadi-crimson text-white scale-110 shadow-lg' : 'bg-vadi-dark hover:bg-vadi-red border border-vadi-border hover:border-vadi-red text-vadi-gold hover:text-white'} flex items-center justify-center transition-all shrink-0">
+                            <i class="fa-solid ${isPlaying ? 'fa-pause' : 'fa-play ml-0.5'} text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            grid.innerHTML += cardHtml;
+        });
+
+        // Update favorites counter
+        document.getElementById('favCount').innerText = favorites.length;
+    }
+
+    function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold border backdrop-blur-md transition-all duration-300 transform translate-x-10 opacity-0 ${
+            type === 'error' 
+                ? 'bg-red-950/90 text-red-200 border-red-700/60' 
+                : type === 'warning'
+                ? 'bg-amber-950/90 text-amber-200 border-amber-700/60'
+                : 'bg-vadi-card text-white border-vadi-gold/40'
+        }`;
+
+        const iconClass = type === 'error' ? 'fa-triangle-exclamation text-red-400' : 'fa-circle-info text-vadi-gold';
+        toast.innerHTML = `<i class="fa-solid ${iconClass} text-sm shrink-0"></i><span>${message}</span>`;
+
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-10', 'opacity-0');
+        });
+
+        setTimeout(() => {
+            toast.classList.add('translate-x-10', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 4500);
+    }
+
+    function stopAudioEngine() {
+        if (audioSynth) {
+            audioSynth.cancel();
         }
+        if (currentAudioElement) {
+            currentAudioElement.onended = null;
+            currentAudioElement.onerror = null;
+            currentAudioElement.pause();
+            currentAudioElement.currentTime = 0;
+            currentAudioElement = null;
+        }
+    }
+
+    function playSound(id, event) {
+        if (event) event.stopPropagation();
+
+        const item = SOUND_DATABASE.find(s => s.id === id);
+        if (!item) return;
+
+        // If already playing this, stop it
+        if (currentPlayingId === id) {
+            stopAllSounds();
+            return;
+        }
+
+        // Stop current sound playback cleanly
+        stopAudioEngine();
+
+        currentPlayingId = id;
+        updatePlayingUI(item);
+        renderSoundGrid();
+
+        // Play dramatic sub hit effect
+        playCinematicHit();
+
+        if (item.audioFile) {
+            try {
+                currentAudioElement = new Audio(encodeURI(item.audioFile));
+                
+                currentAudioElement.onended = () => {
+                    stopAllSounds();
+                };
+
+                currentAudioElement.onerror = (e) => {
+                    console.warn('Ses dosyası yükleme hatası:', item.audioFile, e);
+                    showToast(`"${item.audioFile}" ses dosyası bulunamadı! Lütfen dosyanın HTML ile aynı klasörde olduğundan emin olun.`, 'error');
+                    stopAllSounds();
+                };
+
+                const playPromise = currentAudioElement.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => {
+                        console.warn('Ses oynatma hatası:', err);
+                        showToast(`Ses oynatılamadı. Lütfen ses dosyasının adını ve konumunu kontrol edin.`, 'warning');
+                        stopAllSounds();
+                    });
+                }
+            } catch (err) {
+                console.error('Audio objesi hatası:', err);
+                showToast(`Ses yüklenirken bir hata oluştu.`, 'error');
+                stopAllSounds();
+            }
+        } else if (audioSynth) {
+            try {
+                const utterance = new SpeechSynthesisUtterance(item.audioText || item.quote);
+                utterance.lang = 'tr-TR';
+                utterance.pitch = item.pitch || 0.7;
+                utterance.rate = item.rate || 0.85;
+
+                const voices = audioSynth.getVoices();
+                const trVoice = voices.find(v => v.lang && v.lang.includes('tr'));
+                if (trVoice) {
+                    utterance.voice = trVoice;
+                }
+
+                utterance.onend = () => {
+                    stopAllSounds();
+                };
+
+                utterance.onerror = (e) => {
+                    if (e.error === 'interrupted' || e.error === 'canceled') return;
+                    console.warn('Speech synthesis hatası:', e);
+                    stopAllSounds();
+                };
+
+                setTimeout(() => {
+                    if (currentPlayingId === id) {
+                        audioSynth.speak(utterance);
+                    }
+                }, 50);
+            } catch (err) {
+                console.error('Konuşma sentezi hatası:', err);
+                stopAllSounds();
+            }
+        }
+    }
+
+    function updatePlayingUI(item) {
+        const nowPlayingBar = document.getElementById('nowPlayingBar');
+        document.getElementById('playerChar').innerText = item.characterName;
+        document.getElementById('playerQuote').innerText = `"${item.quote}"`;
+
+        nowPlayingBar.classList.remove('translate-y-28', 'opacity-0');
+        nowPlayingBar.classList.add('translate-y-0', 'opacity-100');
+    }
+
+    function stopAllSounds() {
+        stopAudioEngine();
+        currentPlayingId = null;
+
+        const nowPlayingBar = document.getElementById('nowPlayingBar');
+        if (nowPlayingBar) {
+            nowPlayingBar.classList.add('translate-y-28', 'opacity-0');
+            nowPlayingBar.classList.remove('translate-y-0', 'opacity-100');
+        }
+
+        renderSoundGrid();
+    }
 
         function playSound(id) {
             const item = SOUND_DATABASE.find(s => s.id === id);
